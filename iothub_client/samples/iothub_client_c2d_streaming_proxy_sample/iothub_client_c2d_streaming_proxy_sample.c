@@ -111,22 +111,29 @@ static void on_bytes_received(void* context, const unsigned char* buffer, size_t
 
     if (g_is_uws_client_ready)
     {
-        size_t send_size;
-
-        while (size > 0)
+        if (buffer == NULL)
         {
-            send_size = size <= MAX_WEBSOCKET_PAYLOAD_SIZE_IN_BYTES ? size : MAX_WEBSOCKET_PAYLOAD_SIZE_IN_BYTES;
+            printf("on_bytes_received invoked with NULL buffer (unexpected)\r\n");
+        }
+        else
+        {
+            size_t send_size;
 
-            if (uws_client_send_frame_async(g_uws_client_handle, 2, buffer, send_size, true, on_ws_send_frame_complete, NULL) != 0)
+            while (size > 0)
             {
-                (void)printf("Failed sending data to the local service\r\n");
-                g_continueRunning = false;
-                break;
-            }
+                send_size = size <= MAX_WEBSOCKET_PAYLOAD_SIZE_IN_BYTES ? size : MAX_WEBSOCKET_PAYLOAD_SIZE_IN_BYTES;
 
-            g_outgoingByteCount += size;
-            size -= send_size;
-            buffer += send_size;
+                if (uws_client_send_frame_async(g_uws_client_handle, 2, buffer, send_size, true, on_ws_send_frame_complete, NULL) != 0)
+                {
+                    (void)printf("Failed sending data to the local service\r\n");
+                    g_continueRunning = false;
+                    break;
+                }
+
+                g_outgoingByteCount += size;
+                size -= send_size;
+                buffer += send_size;
+            }
         }
     }
 }
@@ -218,7 +225,21 @@ static void on_ws_peer_closed(void* context, uint16_t* close_code, const unsigne
 {
     (void)context;
     (void)extra_data_length;
-    (void)printf("on_ws_peer_closed (Code: %d, Data: %.*s)\r\n", *close_code, (int)extra_data_length, extra_data);
+
+    (void)printf("on_ws_peer_closed (");
+
+    if (close_code != NULL)
+    {
+        (void)printf("Code: %d, ", *close_code);
+    }
+
+    if (extra_data != NULL)
+    {
+        (void)printf("Data: %.*s", (int)extra_data_length, extra_data);
+    }
+
+    (void)printf(")\r\n");
+
     g_continueRunning = false;
 }
 
